@@ -1,0 +1,56 @@
+## lab.container
+## Podman Quadlet configuration for the Autonomous Self-Evolving AI Dev Lab Core Service
+## Place in: ~/.config/containers/systemd/lab.container (User mode: systemctl --user daemon-reload)
+##        or /etc/containers/systemd/lab.container (System mode)
+
+[Unit]
+Description=Autonomous Self-Evolving AI Development Lab (FastAPI + HTMX + FastMCP)
+After=network-online.target local-fs.target
+Wants=network-online.target
+
+[Container]
+ContainerName=ai-lab-core
+Image=localhost/ai-lab-core:latest
+
+# Environment configuration
+Environment=PYTHONUNBUFFERED=1
+Environment=DATABASE_PATH=/workspace/lab.sqlite
+Environment=SCRIPTS_DIR=/workspace/scripts
+Environment=LOGS_DIR=/workspace/logs
+Environment=CONTAINER_RUNNER_IMAGE=python:3.11-slim
+Environment=PODMAN_HOST=unix:///run/podman/podman.sock
+
+# Secrets and API credentials (GEMINI_API_KEY injected securely)
+EnvironmentFile=%h/.config/ai-lab/lab.env
+
+# Web Interface (HTMX + SSE Aero-lite VS Code layout)
+PublishPort=3000:3000
+
+# Mount persistent volume for SQLite WAL database, generated scripts, and execution logs
+Volume=lab-storage.volume:/workspace:Z
+
+# Rootless Podman Socket: Allows ai-lab-core to dispatch ephemeral sibling containers
+# without running Docker-in-Docker or granting full host root privileges
+Volume=%t/podman/podman.sock:/run/podman/podman.sock:Z
+
+# Security Hardening & Resource Caps for Host Protection
+DropCapability=ALL
+AddCapability=CHOWN
+AddCapability=SETUID
+AddCapability=SETGID
+NoNewPrivileges=true
+Memory=512m
+CPUQuota=100%
+PidsLimit=256
+
+# Labeling
+Label=app=podman-ai-lab
+Label=role=core-orchestrator
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+ExecStartPre=/usr/bin/podman image exists localhost/ai-lab-core:latest
+
+[Install]
+WantedBy=default.target

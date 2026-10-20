@@ -1,0 +1,62 @@
+{
+  "system_health_diagnostic": {
+    "intent_key": "system_health_diagnostic",
+    "canonical_prompt": "Check system resource health and container metrics",
+    "description": "Built-in self-diagnostic and resource telemetry suite",
+    "script_path": "/app/applet/workspace/scripts/system_health_diagnostic.py",
+    "status": "ACTIVE",
+    "consecutive_failures": 0,
+    "execution_count": 8,
+    "last_run_at": "2026-10-20T13:03:37.685Z",
+    "created_at": "2026-10-20T12:40:27.337Z",
+    "last_error": null
+  },
+  "compute_sha256_checksum_on_string": {
+    "intent_key": "compute_sha256_checksum_on_string",
+    "canonical_prompt": "compute sha256 checksum on string",
+    "description": "Autonomously evolved for 'compute sha256 checksum on string'",
+    "script_path": "/app/applet/workspace/scripts/compute_sha256_checksum_on_string.py",
+    "status": "ACTIVE",
+    "consecutive_failures": 0,
+    "execution_count": 2,
+    "last_run_at": "2026-10-20T12:40:42.733Z",
+    "created_at": "2026-10-20T12:40:37.320Z",
+    "last_error": null
+  },
+  "matrix_transpose_calculation_1792500866467": {
+    "intent_key": "matrix_transpose_calculation_1792500866467",
+    "canonical_prompt": "matrix transpose calculation 1792500866467",
+    "description": "Autonomously evolved for 'matrix transpose calculation 1792500866467'",
+    "script_path": "/app/applet/workspace/scripts/matrix_transpose_calculation_1792500866467.py",
+    "status": "ACTIVE",
+    "consecutive_failures": 0,
+    "execution_count": 1,
+    "last_run_at": "2026-10-20T12:54:34.537Z",
+    "created_at": "2026-10-20T12:54:34.478Z",
+    "last_error": null
+  },
+  "matrix_transpose_calculation_1792500899627": {
+    "intent_key": "matrix_transpose_calculation_1792500899627",
+    "canonical_prompt": "matrix transpose calculation 1792500899627",
+    "description": "Autonomously evolved for 'matrix transpose calculation 1792500899627'",
+    "script_path": "/app/applet/workspace/scripts/matrix_transpose_calculation_1792500899627.py",
+    "status": "ACTIVE",
+    "consecutive_failures": 0,
+    "execution_count": 1,
+    "last_run_at": "2026-10-20T12:55:07.708Z",
+    "created_at": "2026-10-20T12:55:07.632Z",
+    "last_error": null
+  },
+  "matrix_transpose_calculation_1792501409378": {
+    "intent_key": "matrix_transpose_calculation_1792501409378",
+    "canonical_prompt": "matrix transpose calculation 1792501409378",
+    "description": "Autonomously evolved for 'matrix transpose calculation 1792501409378'",
+    "script_path": "/app/applet/workspace/scripts/matrix_transpose_calculation_1792501409378.py",
+    "status": "ACTIVE",
+    "consecutive_failures": 0,
+    "execution_count": 1,
+    "last_run_at": "2026-10-20T13:03:37.446Z",
+    "created_at": "2026-10-20T13:03:37.385Z",
+    "last_error": null
+  }
+}

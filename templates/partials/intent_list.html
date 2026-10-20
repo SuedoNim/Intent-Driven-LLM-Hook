@@ -1,0 +1,52 @@
+<!-- templates/partials/intent_list.html -->
+<div class="intent-tree">
+  {% if not intents %}
+    <div class="text-center text-muted p-4 small">
+      <i class="bi bi-inbox fs-3 d-block mb-1 text-secondary opacity-50"></i>
+      No intents registered yet.<br>Dispatch a prompt above to evolve the first intent!
+    </div>
+  {% else %}
+    {% for item in intents %}
+      <div 
+        class="intent-item {% if selected_key == item.intent_key or (not selected_key and loop.first) %}active{% endif %}" 
+        hx-get="/script/{{ item.intent_key }}" 
+        hx-target="#editor-pane"
+        onclick="document.querySelectorAll('.intent-item').forEach(i => i.classList.remove('active')); this.classList.add('active');"
+      >
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <div class="d-flex align-items-center text-truncate pe-2">
+            <i class="bi bi-filetype-py text-warning me-2 fs-6"></i>
+            <span class="font-monospace text-truncate" style="font-size: 0.82rem;" title="{{ item.intent_key }}.py">
+              {{ item.intent_key }}.py
+            </span>
+          </div>
+
+          <!-- Status badge -->
+          {% if item.status == 'ACTIVE' %}
+            <span class="badge badge-active rounded-pill px-2 py-0" style="font-size: 0.65rem;">ACTIVE</span>
+          {% elif item.status == 'QUARANTINED' %}
+            <span class="badge badge-quarantined rounded-pill px-2 py-0" style="font-size: 0.65rem;" title="Quarantined by circuit breaker">QUARANTINE</span>
+          {% else %}
+            <span class="badge badge-evolving rounded-pill px-2 py-0" style="font-size: 0.65rem;">{{ item.status }}</span>
+          {% endif %}
+        </div>
+
+        <div class="d-flex align-items-center justify-content-between text-muted" style="font-size: 0.7rem;">
+          <span class="text-truncate" style="max-width: 170px;" title="{{ item.canonical_prompt }}">
+            {{ item.canonical_prompt }}
+          </span>
+          <span class="text-nowrap font-monospace">
+            <i class="bi bi-play-circle me-1"></i>{{ item.execution_count }} runs
+          </span>
+        </div>
+
+        {% if item.consecutive_failures > 0 %}
+          <div class="mt-1 d-flex align-items-center gap-1 text-danger" style="font-size: 0.68rem;">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>{{ item.consecutive_failures }} consecutive fail(s)</span>
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% endif %}
+</div>

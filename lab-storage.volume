@@ -1,0 +1,11 @@
+## lab-storage.volume
+## Podman Quadlet configuration for persistent lab storage
+## Place in: ~/.config/containers/systemd/lab-storage.volume (User mode)
+##        or /etc/containers/systemd/lab-storage.volume (System mode)
+
+[Volume]
+VolumeName=lab-storage
+Driver=local
+Label=app=podman-ai-lab
+Label=tier=storage
+Label=managed-by=quadlet

@@ -1,0 +1,78 @@
+<!-- templates/partials/script_viewer.html -->
+{% if not intent %}
+  <div class="h-100 d-flex flex-column align-items-center justify-content-center text-secondary">
+    <i class="bi bi-code-square fs-1 mb-2 opacity-50"></i>
+    <p class="small mb-0">Select a script from the Intent Registry sidebar or dispatch a new prompt.</p>
+  </div>
+{% else %}
+  <!-- VS Code Tab Header -->
+  <div class="vscode-tab-bar justify-content-between">
+    <div class="d-flex align-items-center">
+      <div class="vscode-tab">
+        <i class="bi bi-filetype-py text-warning"></i>
+        <span>{{ intent.intent_key }}.py</span>
+        {% if intent.status == 'QUARANTINED' %}
+          <span class="badge bg-danger ms-1" style="font-size: 0.65rem;">LOCKED</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Script Meta Badges & Action Buttons -->
+    <div class="d-flex align-items-center gap-2 pe-2">
+      
+      <!-- AST Syntax Verification Badge -->
+      <span class="badge bg-dark text-success border border-success-subtle font-monospace py-1" style="font-size: 0.72rem;">
+        <i class="bi bi-check2-circle me-1"></i>AST Validated: def execute(data)
+      </span>
+
+      <!-- Circuit Breaker Status & Reset -->
+      {% if intent.status == 'QUARANTINED' %}
+        <button 
+          class="btn btn-sm btn-outline-danger py-0 px-2 d-flex align-items-center gap-1"
+          style="font-size: 0.75rem;"
+          hx-post="/circuit-breaker/{{ intent.intent_key }}/reset"
+          hx-target="#circuit-breaker-status-slot"
+        >
+          <i class="bi bi-arrow-counterclockwise"></i> Reset Circuit Breaker
+        </button>
+      {% endif %}
+
+      <div id="circuit-breaker-status-slot"></div>
+
+      <!-- Execute in Ephemeral Container Button -->
+      <button 
+        class="btn btn-sm btn-success py-0 px-2 d-flex align-items-center gap-1"
+        style="font-size: 0.75rem;"
+        hx-post="/script/{{ intent.intent_key }}/run"
+        hx-target="#script-run-status-slot"
+        hx-indicator="#run-spinner"
+        {% if intent.status == 'QUARANTINED' %}disabled title="Quarantined: Reset circuit breaker first"{% endif %}
+      >
+        <span id="run-spinner" class="spinner-border spinner-border-sm htmx-indicator" role="status"></span>
+        <i class="bi bi-play-fill"></i>
+        <span>Run Ephemeral Container</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Inline Run Notification Slot -->
+  <div id="script-run-status-slot" class="px-3 pt-2 bg-dark"></div>
+
+  <!-- Script Info Subheader -->
+  <div class="bg-dark text-secondary px-3 py-1 border-bottom border-secondary border-opacity-25 d-flex align-items-center justify-content-between small font-monospace" style="font-size: 0.75rem;">
+    <div class="text-truncate me-2">
+      <span class="text-muted">Target Canonical Prompt:</span>
+      <span class="text-light">"{{ intent.canonical_prompt }}"</span>
+    </div>
+    <div class="d-flex align-items-center gap-3 text-nowrap">
+      <span>Runs: <strong class="text-light">{{ intent.execution_count }}</strong></span>
+      <span>Failures: <strong class="{% if intent.consecutive_failures > 0 %}text-danger{% else %}text-light{% endif %}">{{ intent.consecutive_failures }}/{{ max_failures }}</strong></span>
+      <span>Sandbox: <code class="text-info">podman --network none</code></span>
+    </div>
+  </div>
+
+  <!-- Prism.js Code Viewer with Line Numbers (No Console Pane) -->
+  <div class="flex-grow-1 overflow-auto position-relative">
+    <pre class="line-numbers"><code class="language-python">{{ code }}</code></pre>
+  </div>
+{% endif %}

@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Autonomous AI Development Lab — Podman Quadlet</title>
+  <meta name="description" content="Autonomous, self-evolving AI development lab running under Podman Quadlet with SQLite WAL intent caching, Gemini code evolution, isolated ephemeral execution, and circuit breaker.">
+  
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <!-- Prism.js Syntax Highlighting Theme -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet">
+
+  <!-- HTMX & SSE Extension -->
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+
+  <style>
+    :root {
+      --aero-bg: #eef4fb;
+      --aero-glass-header: rgba(220, 235, 252, 0.72);
+      --aero-glass-panel: rgba(255, 255, 255, 0.75);
+      --aero-glass-sidebar: rgba(245, 249, 255, 0.82);
+      --aero-border: rgba(255, 255, 255, 0.65);
+      --aero-border-subtle: rgba(180, 205, 235, 0.45);
+      --aero-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+      --aero-shadow-sm: 0 2px 8px 0 rgba(0, 0, 0, 0.04);
+      --vscode-editor-bg: #1e1e1e;
+      --vscode-sidebar-bg: #f8fafc;
+    }
+
+    body {
+      background-color: var(--aero-bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(200, 225, 255, 0.5) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(215, 235, 255, 0.5) 0px, transparent 50%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      color: #1e293b;
+      overflow-x: hidden;
+    }
+
+    /* Aero-lite frosted glass styling */
+    .glass-header {
+      background: var(--aero-glass-header);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--aero-border-subtle);
+      box-shadow: var(--aero-shadow-sm);
+    }
+
+    .glass-card {
+      background: var(--aero-glass-panel);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--aero-border);
+      border-radius: 10px;
+      box-shadow: var(--aero-shadow);
+    }
+
+    .glass-sidebar {
+      background: var(--aero-glass-sidebar);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-right: 1px solid var(--aero-border-subtle);
+    }
+
+    /* 2-Pane VS Code Layout */
+    .vscode-container {
+      height: calc(100vh - 128px);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--aero-border-subtle);
+      box-shadow: var(--aero-shadow);
+      background: #ffffff;
+    }
+
+    .vscode-sidebar {
+      width: 320px;
+      min-width: 280px;
+      max-width: 380px;
+      overflow-y: auto;
+      border-right: 1px solid #e2e8f0;
+      background: #f8fafc;
+    }
+
+    .vscode-editor-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--vscode-editor-bg);
+    }
+
+    .vscode-tab-bar {
+      background: #252526;
+      border-bottom: 1px solid #333333;
+      padding: 0 12px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .vscode-tab {
+      background: #1e1e1e;
+      color: #e2e8f0;
+      padding: 6px 14px;
+      font-size: 0.85rem;
+      border-top: 2px solid #38bdf8;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: monospace;
+    }
+
+    .intent-item {
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 4px;
+      transition: all 0.15s ease-in-out;
+      border: 1px solid transparent;
+    }
+
+    .intent-item:hover {
+      background: rgba(220, 235, 252, 0.7);
+      border-color: rgba(180, 205, 235, 0.6);
+    }
+
+    .intent-item.active {
+      background: rgba(200, 225, 255, 0.85);
+      border-color: #93c5fd;
+      font-weight: 500;
+    }
+
+    /* Status Pills */
+    .badge-active {
+      background-color: #10b981;
+      color: white;
+    }
+
+    .badge-quarantined {
+      background-color: #ef4444;
+      color: white;
+      animation: pulse-danger 2s infinite;
+    }
+
+    .badge-evolving {
+      background-color: #3b82f6;
+      color: white;
+    }
+
+    @keyframes pulse-danger {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.75; }
+    }
+
+    /* Editor styling */
+    pre[class*="language-"] {
+      margin: 0 !important;
+      border-radius: 0 !important;
+      height: 100%;
+      background: var(--vscode-editor-bg) !important;
+      font-size: 0.88rem;
+    }
+
+    code[class*="language-"] {
+      font-family: 'JetBrains Mono', Consolas, Monaco, 'Courier New', Courier, monospace;
+    }
+
+    /* Dispatch result bar */
+    .dispatch-banner {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: monospace;
+      font-size: 0.82rem;
+      padding: 10px 16px;
+      border-bottom: 1px solid #334155;
+    }
+
+    .pulse-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      margin-right: 6px;
+      box-shadow: 0 0 6px #10b981;
+    }
+  </style>
+</head>
+<body hx-ext="sse" sse-connect="/events">
+
+  <!-- Aero-lite Translucent Slate Top Header -->
+  <header class="glass-header sticky-top py-2 px-4 mb-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+      
+      <!-- Brand & Architecture Badges -->
+      <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-box-seam-fill text-primary fs-4"></i>
+          <div>
+            <div class="fw-bold lh-1 d-flex align-items-center gap-2">
+              <span>PODMAN AI LAB</span>
+              <span class="badge bg-secondary-subtle text-secondary border px-2 py-0" style="font-size: 0.7rem;">QUADLET v0.1</span>
+            </div>
+            <small class="text-muted" style="font-size: 0.75rem;">Autonomous Self-Evolving Development Runtime</small>
+          </div>
+        </div>
+
+        <div class="d-none d-md-flex align-items-center gap-2 ms-2 ps-3 border-start">
+          <span class="badge bg-light text-dark border"><i class="pulse-dot"></i>SQLite WAL (<span id="stats-intents-count">{{ intents|length }}</span> intents)</span>
+          <span class="badge bg-light text-dark border"><i class="bi bi-shield-check text-success me-1"></i>Isolated Runner: <code class="text-primary">--net=none</code></span>
+          <span class="badge bg-light text-dark border"><i class="bi bi-cpu text-info me-1"></i>Podman Socket: <code class="text-secondary">rootless</code></span>
+        </div>
+      </div>
+
+      <!-- Action & Unit Modal Buttons -->
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 glass-card py-1 px-3" data-bs-toggle="modal" data-bs-target="#quadletModal">
+          <i class="bi bi-file-earmark-code text-primary"></i>
+          <span>Quadlet Units (.container)</span>
+        </button>
+        <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 glass-card py-1 px-3" data-bs-toggle="modal" data-bs-target="#archModal">
+          <i class="bi bi-diagram-3 text-info"></i>
+          <span>Architecture Decision</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Dumb Fast Router Input Bar -->
+    <div class="mt-2 pt-2 border-top border-light">
+      <form id="dispatchForm" hx-post="/dispatch" hx-target="#dispatch-result-container" hx-indicator="#dispatch-spinner" class="d-flex align-items-center gap-2">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-lightning-charge-fill text-warning"></i> Fast Router</span>
+          <input type="text" name="prompt" class="form-control border-start-0" placeholder="Enter intent prompt (e.g. 'compute sha256 hash', 'generate fibonacci sequence', 'parse csv payload')..." required autocomplete="off">
+        </div>
+
+        <div class="dropdown">
+          <button class="btn btn-sm btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Optional JSON Payload">
+            <i class="bi bi-code-slash"></i> Data
+          </button>
+          <div class="dropdown-menu p-3 shadow-sm dropdown-menu-end" style="width: 320px;">
+            <label class="form-label small fw-bold mb-1">Input Data JSON (data argument):</label>
+            <textarea name="custom_data" class="form-control form-control-sm font-monospace" rows="4" placeholder='{"items": [10, 20, 30], "mode": "strict"}'></textarea>
+            <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">Passed to <code class="text-dark">execute(data)</code> in ephemeral container.</small>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-sm btn-primary d-flex align-items-center gap-2 px-3 fw-medium">
+          <span id="dispatch-spinner" class="spinner-border spinner-border-sm htmx-indicator" role="status" aria-hidden="true"></span>
+          <span>Dispatch</span>
+        </button>
+      </form>
+    </div>
+  </header>
+
+  <!-- Main Container: 2-Pane VS Code Layout -->
+  <main class="container-fluid px-4 pb-3">
+    
+    <!-- Top Execution Alert / Result Slot -->
+    <div id="dispatch-result-container"></div>
+
+    <div class="vscode-container d-flex">
+      
+      <!-- Left Sidebar: Intent Registry & File Tree -->
+      <aside class="vscode-sidebar p-3 d-flex flex-column" id="sidebar-pane">
+        
+        <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+          <span class="fw-bold small text-uppercase text-secondary tracking-wider" style="font-size: 0.72rem;">
+            <i class="bi bi-folder2-open text-primary me-1"></i> Intent Registry (WAL)
+          </span>
+          <button class="btn btn-link btn-sm p-0 text-muted" hx-get="/intents" hx-target="#intent-list-container" title="Refresh registry">
+            <i class="bi bi-arrow-clockwise"></i>
+          </button>
+        </div>
+
+        <!-- Filter input -->
+        <div class="mb-3">
+          <input type="text" id="intentFilter" class="form-control form-control-sm" placeholder="Filter intents..." onkeyup="filterIntents(this.value)">
+        </div>
+
+        <!-- Dynamic Intent File List (refreshed via HTMX & SSE) -->
+        <div class="flex-grow-1 overflow-auto" id="intent-list-container" sse-swap="intent_created,execution_finished,circuit_breaker_tripped,quarantine_reset" hx-get="/intents" hx-trigger="sse:intent_created, sse:execution_finished, sse:circuit_breaker_tripped, sse:quarantine_reset">
+          {% include "partials/intent_list.html" %}
+        </div>
+
+        <!-- Circuit Breaker Status Footer -->
+        <div class="mt-3 pt-2 border-top small text-muted" style="font-size: 0.72rem;">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span>Circuit Breaker Limit:</span>
+            <span class="fw-bold text-dark">{{ max_failures }} consecutive fails</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span>Ephemeral Caps:</span>
+            <span class="text-dark">256MB / 0.5 CPU</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Center Pane: Script Viewer with Prism.js (No Console Pane) -->
+      <section class="vscode-editor-pane" id="editor-pane">
+        {% include "partials/script_viewer.html" %}
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Modal 1: Quadlet Unit Files Viewer -->
+  <div class="modal fade" id="quadletModal" tabindex="-1" aria-labelledby="quadletModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content glass-card">
+        <div class="modal-header py-2 glass-header">
+          <h6 class="modal-title fw-bold" id="quadletModalLabel"><i class="bi bi-box me-1 text-primary"></i> Podman Quadlet Deployment Configurations</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-3">
+          <ul class="nav nav-tabs mb-3" id="quadletTab" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="lab-container-tab" data-bs-toggle="tab" data-bs-target="#lab-container-pane" type="button" role="tab">lab.container</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="lab-volume-tab" data-bs-toggle="tab" data-bs-target="#lab-volume-pane" type="button" role="tab">lab-storage.volume</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="lab-runner-tab" data-bs-toggle="tab" data-bs-target="#lab-runner-pane" type="button" role="tab">lab-runner.container</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="pyproject-tab" data-bs-toggle="tab" data-bs-target="#pyproject-pane" type="button" role="tab">pyproject.toml (uv)</button>
+            </li>
+          </ul>
+          <div class="tab-content" id="quadletTabContent">
+            <div class="tab-pane fade show active" id="lab-container-pane" role="tabpanel">
+              <pre><code class="language-ini">[Unit]
+Description=Autonomous Self-Evolving AI Development Lab (FastAPI + HTMX + FastMCP)
+After=network-online.target local-fs.target
+Wants=network-online.target
+
+[Container]
+ContainerName=ai-lab-core
+Image=localhost/ai-lab-core:latest
+
+# Environment configuration
+Environment=PYTHONUNBUFFERED=1
+Environment=DATABASE_PATH=/workspace/lab.sqlite
+Environment=SCRIPTS_DIR=/workspace/scripts
+Environment=LOGS_DIR=/workspace/logs
+Environment=CONTAINER_RUNNER_IMAGE=python:3.11-slim
+Environment=PODMAN_HOST=unix:///run/podman/podman.sock
+
+# Secrets
+EnvironmentFile=%h/.config/ai-lab/lab.env
+
+# Web Interface
+PublishPort=3000:3000
+
+# Mount persistent storage for SQLite WAL database, scripts, logs
+Volume=lab-storage.volume:/workspace:Z
+
+# Rootless Podman Socket: Allows ai-lab-core to dispatch ephemeral sibling containers
+Volume=%t/podman/podman.sock:/run/podman/podman.sock:Z
+
+# Security Hardening & Strict Resource Caps
+DropCapability=ALL
+AddCapability=CHOWN
+AddCapability=SETUID
+AddCapability=SETGID
+NoNewPrivileges=true
+Memory=512m
+CPUQuota=100%
+PidsLimit=256
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target</code></pre>
+            </div>
+            <div class="tab-pane fade" id="lab-volume-pane" role="tabpanel">
+              <pre><code class="language-ini">[Volume]
+VolumeName=lab-storage
+Driver=local
+Label=app=podman-ai-lab
+Label=tier=storage
+Label=managed-by=quadlet</code></pre>
+            </div>
+            <div class="tab-pane fade" id="lab-runner-pane" role="tabpanel">
+              <pre><code class="language-ini">[Unit]
+Description=Base Image Definition for Ephemeral Podman Sibling Runners
+After=network-online.target
+
+[Container]
+ContainerName=ai-lab-runner-base
+Image=docker.io/library/python:3.11-slim
+Pull=newer
+RunInit=true
+ReadOnly=true
+
+[Install]
+WantedBy=default.target</code></pre>
+            </div>
+            <div class="tab-pane fade" id="pyproject-pane" role="tabpanel">
+              <pre><code class="language-toml">[project]
+name = "podman-ai-lab"
+version = "0.1.0"
+description = "Autonomous, self-evolving AI development lab running under Podman Quadlet"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "google-genai>=0.1.1",
+    "mcp>=1.1.2",
+    "jinja2>=3.1.4",
+    "aiosqlite>=0.20.0",
+    "pydantic>=2.10.0",
+    "sse-starlette>=2.1.3",
+    "python-multipart>=0.0.12",
+    "httpx>=0.28.0",
+]
+
+[tool.uv]
+dev-dependencies = ["pytest>=8.3.0", "ruff>=0.7.0"]</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Architecture Decision Rationale -->
+  <div class="modal fade" id="archModal" tabindex="-1" aria-labelledby="archModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content glass-card">
+        <div class="modal-header py-2 glass-header">
+          <h6 class="modal-title fw-bold" id="archModalLabel"><i class="bi bi-cpu-fill me-1 text-info"></i> Phase 0 Architectural Pivot Evaluation</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4 small">
+          <h6 class="fw-bold text-primary mb-2">Verdict: NO PIVOT. Proceed with Custom Minimal Code.</h6>
+          <p class="text-muted">An evaluation of off-the-shelf orchestrators (n8n, Dify, LiteLLM, Open-WebUI) determined that existing 3rd-party platforms fail to fulfill the mandatory architectural constraints without introducing extreme bloat and insecure container-in-container workarounds:</p>
+          
+          <ul class="list-group list-group-flush mb-3">
+            <li class="list-group-item bg-transparent"><strong>1. Ephemeral Rootless Podman Sibling Isolation:</strong> n8n/Dify cannot directly dispatch unprivileged sibling containers via rootless <code>podman.sock</code> with <code>--network none</code> and memory/CPU limits without running custom host scripts.</li>
+            <li class="list-group-item bg-transparent"><strong>2. Atomic SQLite WAL Intent Caching:</strong> No off-the-shelf router provides sub-millisecond local SQLite WAL resolution linked directly to executable script hashes with automated quarantine circuit breakers.</li>
+            <li class="list-group-item bg-transparent"><strong>3. FastMCP AST Pre-Flight Syntax Verification:</strong> Direct AST parsing (<code>ast.parse</code>) and entrypoint contract validation (<code>def execute(data=None)</code>) prior to containerization requires custom AST logic.</li>
+            <li class="list-group-item bg-transparent"><strong>4. Lightweight Quadlet Footprint:</strong> Custom Python (`uv` + FastAPI + FastMCP + HTMX) runs in a single <150MB RAM unit, whereas an off-the-shelf stack (Dify + Postgres + Redis + LiteLLM + Open-WebUI) consumes >3GB RAM.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Prism.js Syntax Highlighting Script -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-ini.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-toml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+
+  <script>
+    // Client-side filtering of intents
+    function filterIntents(query) {
+      const q = query.toLowerCase();
+      document.querySelectorAll('.intent-item').forEach(el => {
+        const text = el.innerText.toLowerCase();
+        el.style.display = text.includes(q) ? 'block' : 'none';
+      });
+    }
+
+    // Auto re-highlight code when HTMX replaces elements
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+      if (window.Prism) {
+        Prism.highlightAll();
+      }
+    });
+
+    // Listen for SSE broadcast updates
+    document.body.addEventListener('htmx:sseMessage', function(e) {
+      console.log('SSE Lab Event:', e.detail);
+    });
+  </script>
+</body>
+</html>

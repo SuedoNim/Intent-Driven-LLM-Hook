@@ -1,0 +1,53 @@
+<!-- templates/partials/dispatch_result.html -->
+<div class="alert {% if error %}alert-danger{% else %}alert-success{% endif %} alert-dismissible fade show mb-2 py-2 px-3 small glass-card" role="alert" style="border-left: 4px solid {% if error %}#ef4444{% else %}#10b981{% endif %};">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+    
+    <div class="d-flex align-items-center gap-2">
+      {% if error %}
+        <i class="bi bi-shield-x fs-5 text-danger"></i>
+      {% else %}
+        <i class="bi bi-lightning-charge-fill fs-5 text-warning"></i>
+      {% endif %}
+
+      <div>
+        <div class="fw-bold d-flex align-items-center gap-2">
+          <span>Intent: <code class="text-primary">{{ intent.intent_key }}.py</code></span>
+          {% if action_type == 'FAST_ROUTER_CACHE_HIT' %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle">
+              <i class="bi bi-speedometer2 me-1"></i>FAST ROUTER HIT (&lt;2ms)
+            </span>
+          {% else %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+              <i class="bi bi-stars me-1"></i>EVOLUTIONARY SYNTHESIS (GEMINI + AST)
+            </span>
+          {% endif %}
+          
+          {% if execution_result %}
+            <span class="badge bg-dark text-light border">
+              Runner: {{ execution_result.runner }} ({{ execution_result.duration_ms }}ms)
+            </span>
+          {% endif %}
+        </div>
+
+        {% if error %}
+          <div class="text-danger mt-1 fw-medium">{{ error }}</div>
+        {% elif execution_result and execution_result.output %}
+          <div class="font-monospace text-muted mt-1 text-truncate" style="max-width: 800px; font-size: 0.75rem;">
+            <strong>Result:</strong> {{ execution_result.output | tojson }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Quick action to load script into center editor -->
+    <button 
+      class="btn btn-sm btn-outline-dark py-1 px-2" 
+      style="font-size: 0.75rem;" 
+      hx-get="/script/{{ intent.intent_key }}" 
+      hx-target="#editor-pane"
+    >
+      <i class="bi bi-eye me-1"></i> Inspect Code
+    </button>
+  </div>
+  <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>

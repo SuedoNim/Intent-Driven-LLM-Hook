@@ -1,0 +1,6 @@
+{
+  "name": "Autonomous Self-Evolving AI Dev Lab",
+  "description": "Autonomous, self-evolving AI development lab running under Podman Quadlet with SQLite WAL intent caching, Gemini code evolution, isolated ephemeral execution, and circuit breaker.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

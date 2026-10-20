@@ -1,0 +1,21 @@
+## lab-runner.container
+## Base image specification for the ephemeral sibling runner containers.
+## Invoked on-demand by ai-lab-core via:
+## podman run --rm --network none --memory 256m --cpus 0.5 --pids-limit 64 \
+##   -v lab-storage:/workspace:ro localhost/ai-lab-runner:latest python -m runner <intent_key>
+
+[Unit]
+Description=Base Image Definition for Ephemeral Podman Sibling Runners
+After=network-online.target
+
+[Container]
+ContainerName=ai-lab-runner-base
+Image=docker.io/library/python:3.11-slim
+Pull=newer
+RunInit=true
+
+# Read-only root filesystem when executing
+ReadOnly=true
+
+[Install]
+WantedBy=default.target
